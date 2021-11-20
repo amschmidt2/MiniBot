@@ -7,6 +7,11 @@ package frc.robot;
 import edu.wpi.first.wpilibj.Jaguar;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
+
+import edu.wpi.first.wpilibj.Timer;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -22,15 +27,37 @@ public class Robot extends TimedRobot {
 
   private Jaguar leftMotor = new Jaguar(0);
   private Jaguar rightMotor = new Jaguar(1);
-
   private Joystick joy1 = new Joystick(0);
 
-  @Override
-  public void robotInit() {}
+
+  // For network communication (limelight/RasPI Camera)
+
+  
+  // For network communication (limelight/RasPI Camera)
+  NetworkTable limeTable;
+  NetworkTableEntry camMode, lightMode;
+  
+  
+
+  //Autonomous Timer
+  Timer autoTimer = new Timer();
 
   @Override
-  public void robotPeriodic() {}
+  public void robotInit() {
 
+
+    limeTable = NetworkTableInstance.getDefault().getTable("limelight");
+    camMode = limeTable.getEntry("camMode");
+    lightMode = limeTable.getEntry("ledMode");
+
+    joy1 = new Joystick(0);
+  }
+    
+  @Override
+  public void robotPeriodic() {
+  
+  }
+  
   @Override
   public void autonomousInit() {}
 
@@ -40,32 +67,65 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
     rightMotor.setInverted(true);
+
+    lightMode.setNumber(3); // turn on LEDs
+    camMode.setNumber(0);   //set limelight to vision mode
   }
+  
 
   @Override
   public void teleopPeriodic() {
+
+   
+  // IF we are pressing the trigger (button 1) we test vision
+  if (joy1.getRawButton(1)) {
+    double dx = limeTable.getEntry("tx").getDouble(-1000);
+   
+      lightMode.setNumber(3); // turn on LEDs
+
+    System.out.println("Limeline Target X-Value:" + dx);
+
+
+
+    //if no value do nothing
+    
+    if(dx == 0)
+      {
+        System.out.println("No target found on Limelight.");
+        leftMotor.set(0.1);
+        rightMotor.set(-0.1);
+
+    }else if (dx < -5)     //ADJUST THESE VALUES! (TARGET ERROR ALLOWANCE)
+    {
+      System.out.println("Turning LEFT");
+      leftMotor.set(-0.3);
+      rightMotor.set(0.3);
+    }else if (dx > 5)   //ADJUST THESE VALUES! (TARGET ERROR ALLOWANCE)
+    {
+      System.out.println("Turning RIGHT");
+      leftMotor.set(0.3);
+      rightMotor.set(-0.3); 
+    }else
+      {
+        System.out.println("ON TARGET!");
+        leftMotor.set(0.3);
+        rightMotor.set(0.3);
+    
+  } }
+  else
+  {
+    
+      lightMode.setNumber(1); // turn OFF LEDs
+
     double speed = -joy1.getRawAxis(1) * 0.6;
     double turn = -joy1.getRawAxis(0) * 0.3;
 
-    double left = speed + turn;
-    double right = speed - turn;
+    double left = speed - turn;
+    double right = speed + turn;
 
     leftMotor.set(left);
     rightMotor.set(right);
+
+    }
   }
-
-  @Override
-  public void disabledInit() {}
-
-  @Override
-  public void disabledPeriodic() {}
-
-  @Override
-  public void testInit() {}
-
-  @Override
-  public void testPeriodic() {}
 }
-
-//Create a if, else if, if statement in order to program the arm for the mini robot.
-//You are able to change code between the big robot and the mini robot in order to program right
